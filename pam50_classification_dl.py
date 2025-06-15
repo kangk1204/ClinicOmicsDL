@@ -536,7 +536,7 @@ class UltimateMLPipeline:
             full=Pipeline([("pre",pipe),("clf",model)])
             cv=RepeatedStratifiedKFold(n_splits=CV_FOLDS,random_state=trial.number,n_repeats=1)
             try:
-                scr=np.mean(cross_val_score(full,X,y_enc,cv=cv,scoring="balanced_accuracy",
+                scr=np.mean(cross_val_score(full,X,y_enc,cv=cv,scoring="roc_auc_ovr",
                                             n_jobs=N_JOBS,error_score='raise'))
                 best=max(best,scr)
                 return scr
@@ -579,7 +579,7 @@ class UltimateMLPipeline:
         pipe=Pipeline([("pre",pre),("clf",lgb)])
         cv=StratifiedKFold(n_splits=CV_FOLDS,shuffle=True,random_state=self.random_state)
         opt=BayesSearchCV(pipe,spaces,n_iter=BAYESIAN_TRIALS,cv=cv,
-                          scoring="balanced_accuracy",n_jobs=N_JOBS,
+                          scoring="roc_auc_ovr",n_jobs=N_JOBS,
                           random_state=self.random_state,verbose=0)
         with tqdm(total=BAYESIAN_TRIALS,desc="BayesOpt",
                   bar_format="{l_bar}%s{bar}%s{r_bar}"%(Fore.MAGENTA,Style.RESET_ALL)) as pbar:
@@ -607,7 +607,7 @@ class UltimateMLPipeline:
             model=LGBMClassifier(**params)
             pipe=Pipeline([("pre",pre),("clf",model)])
             cv=StratifiedKFold(n_splits=CV_FOLDS,shuffle=True,random_state=trial.number)
-            scr=np.mean(cross_val_score(pipe,X,y_enc,cv=cv,scoring="balanced_accuracy",n_jobs=N_JOBS))
+            scr=np.mean(cross_val_score(pipe,X,y_enc,cv=cv,scoring="roc_auc_ovr",n_jobs=N_JOBS))
             best=max(best,scr)
             return scr
         study=optuna.create_study(direction="maximize",
@@ -955,9 +955,9 @@ def main():
         pipe.train_final_models(Xtr,ytr)
         test_metrics=pipe.evaluate_models(Xts,yts,OUTPUT_DIR)
         pipe.save_models(OUTPUT_DIR)
-        best=max(test_metrics,key=lambda k:test_metrics[k]['balanced_accuracy'])
+        best=max(test_metrics,key=lambda k:test_metrics[k]['roc_auc_ovr'])
         print(f"{Fore.GREEN}🏆 BEST MODEL: {best}{Style.RESET_ALL} "
-              f"{test_metrics[best]['balanced_accuracy']:.4f}")
+              f"{test_metrics[best]['roc_auc_ovr']:.4f}")
     except Exception as e:
         print(f"{Fore.RED}❌ Error: {e}{Style.RESET_ALL}")
         import traceback; traceback.print_exc()
