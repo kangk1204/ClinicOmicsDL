@@ -537,7 +537,7 @@ class UltimateMLPipeline:
             cv=RepeatedStratifiedKFold(n_splits=CV_FOLDS,random_state=trial.number,n_repeats=1)
             try:
                 scr=np.mean(cross_val_score(full,X,y_enc,cv=cv,scoring="balanced_accuracy",
-                                            n_jobs=1,error_score='raise'))
+                                            n_jobs=N_JOBS,error_score='raise'))
                 best=max(best,scr)
                 return scr
             except Exception: return 0.0
@@ -579,7 +579,7 @@ class UltimateMLPipeline:
         pipe=Pipeline([("pre",pre),("clf",lgb)])
         cv=StratifiedKFold(n_splits=CV_FOLDS,shuffle=True,random_state=self.random_state)
         opt=BayesSearchCV(pipe,spaces,n_iter=BAYESIAN_TRIALS,cv=cv,
-                          scoring="balanced_accuracy",n_jobs=1,
+                          scoring="balanced_accuracy",n_jobs=N_JOBS,
                           random_state=self.random_state,verbose=0)
         with tqdm(total=BAYESIAN_TRIALS,desc="BayesOpt",
                   bar_format="{l_bar}%s{bar}%s{r_bar}"%(Fore.MAGENTA,Style.RESET_ALL)) as pbar:
@@ -607,7 +607,7 @@ class UltimateMLPipeline:
             model=LGBMClassifier(**params)
             pipe=Pipeline([("pre",pre),("clf",model)])
             cv=StratifiedKFold(n_splits=CV_FOLDS,shuffle=True,random_state=trial.number)
-            scr=np.mean(cross_val_score(pipe,X,y_enc,cv=cv,scoring="balanced_accuracy",n_jobs=1))
+            scr=np.mean(cross_val_score(pipe,X,y_enc,cv=cv,scoring="balanced_accuracy",n_jobs=N_JOBS))
             best=max(best,scr)
             return scr
         study=optuna.create_study(direction="maximize",
@@ -639,7 +639,7 @@ class UltimateMLPipeline:
                             n_estimators=500,max_depth=8,class_weight='balanced',
                             random_state=self.random_state,n_jobs=N_JOBS))])
         ens=VotingClassifier(estimators=[('xgb',xgb_pipe),('lgb',lgb_pipe),
-                                         ('rf',rf_pipe)],voting='soft',n_jobs=1)
+                                         ('rf',rf_pipe)],voting='soft',n_jobs=N_JOBS)
         tr.end_step(True,"Voting ensemble ready")
         return ens
 
@@ -656,7 +656,7 @@ class UltimateMLPipeline:
                        ("log",LogisticRegression(class_weight='balanced',
                                  random_state=self.random_state,max_iter=1000,n_jobs=N_JOBS))])
         stack=StackingClassifier(estimators=all_est,final_estimator=meta,
-                                 cv=CV_FOLDS,n_jobs=1,passthrough=True)
+                                 cv=CV_FOLDS,n_jobs=N_JOBS,passthrough=True)
         tr.end_step(True,"Stacking ensemble ready")
         return stack
 
@@ -682,7 +682,7 @@ class UltimateMLPipeline:
             with tqdm(total=CV_FOLDS*CV_REPEATS,desc=f"CV {name}",
                       bar_format="{l_bar}%s{bar}%s{r_bar}"%(Fore.GREEN,Style.RESET_ALL)) as pb:
                 cvres=cross_validate(model,X,y_enc,cv=outer,scoring=scoring,
-                                     n_jobs=1,return_train_score=False)
+                                     n_jobs=N_JOBS,return_train_score=False)
                 pb.update(CV_FOLDS*CV_REPEATS)
             res[name]={m:{'mean':np.mean(cvres[f'test_{m}']),
                           'std': np.std(cvres[f'test_{m}'])}
